@@ -37,7 +37,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@next/swc-darwin-arm64": "^14.2.3",
     "@types/react": "18.3.3",
     "drizzle-kit": "^0.22.1",
     "eslint": "^8.57.0",
