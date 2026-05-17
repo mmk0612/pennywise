@@ -1,27 +1,28 @@
-import { UserButton } from "@clerk/nextjs";
+import { UserButton } from "@/lib/auth-client";
 import React from "react";
 import SearchBar from "./SearchBar";
-import { db } from "@/utils/dbConfig";
-import { Budgets } from "@/utils/schema";
-import { eq } from "drizzle-orm";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { sql } from "drizzle-orm";
+import { budgetApi } from "@/lib/api-client";
 
 function DashboardHeader() {
   const router = useRouter();
   const handleSearch = async (query) => {
-    const lowerCaseQuery = query.toLowerCase();
-    const result = await db
-      .select()
-      .from(Budgets)
-      .where(sql`LOWER(${Budgets.name}) = ${lowerCaseQuery}`);
+    if (!query?.trim()) {
+      toast.error("Please enter a budget name");
+      return;
+    }
 
-    console.log(lowerCaseQuery, result);
-    if (!result || result[0].id === undefined) {
+    const lowerCaseQuery = query.toLowerCase();
+    const budgets = await budgetApi.list();
+    const match = budgets.find(
+      (budget) => budget.name?.toLowerCase() === lowerCaseQuery,
+    );
+
+    if (!match?.id) {
       toast.error("Oops! No Budget found");
     } else {
-      router.push(`/dashboard/expenses/${result[0].id}`);
+      router.push(`/dashboard/expenses/${match.id}`);
     }
   };
   return (

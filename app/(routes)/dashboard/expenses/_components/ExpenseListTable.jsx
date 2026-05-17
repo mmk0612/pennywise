@@ -1,21 +1,16 @@
-import { eq } from "drizzle-orm";
 import { Trash, TrashIcon } from "lucide-react";
-import { db } from "@/utils/dbConfig";
 import React from "react";
-import { Expenses } from "@/utils/schema";
 import { toast } from "sonner";
+import { expenseApi } from "@/lib/api-client";
 
 function ExpenseListTable({ expensesList, refreshData }) {
   const deleteExpense = async (expense) => {
-    const result = await db
-      .delete(Expenses)
-      .where(eq(Expenses.id, expense.id))
-      .returning();
-
-    console.log(result);
-    if (result) {
+    try {
+      await expenseApi.delete(expense.id);
       toast.success("Expense Deleted Successfully");
       refreshData();
+    } catch (error) {
+      toast.error(error.message || "Failed to delete expense");
     }
   };
   return (

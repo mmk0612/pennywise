@@ -3,35 +3,33 @@ import React from "react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Expenses, Budgets } from "@/utils/schema";
-import { toast, Toaster } from "sonner";
-import moment from "moment";
-import { db } from "@/utils/dbConfig";
+import { toast } from "sonner";
 import { Loader } from "lucide-react";
-function AddExpense({ budgetId, user, refreshData }) {
+import { expenseApi } from "@/lib/api-client";
+function AddExpense({ budgetId, refreshData }) {
   const [amount, setAmount] = useState(0);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
   const addNewExpense = async () => {
     setLoading(true);
-    const result = await db
-      .insert(Expenses)
-      .values({
-        name: name,
-        amount: amount,
-        budgetId: budgetId,
-        createdAt: moment().format("DD/MM/yyy"),
-      })
-      .returning({ insertedId: Budgets.id });
+    try {
+      await expenseApi.create({
+        title: name,
+        amount: Number(amount),
+        expenseDate: new Date().toISOString(),
+        budgetId: Number(budgetId),
+        categoryId: null,
+        notes: null,
+      });
 
-    setAmount("");
-    setName("");
-    console.log(result);
-    if (result) {
+      setAmount("");
+      setName("");
       setLoading(false);
       refreshData();
       toast.success("Expense Added Successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to add expense");
     }
     setLoading(false);
   };

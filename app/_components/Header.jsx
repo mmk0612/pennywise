@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser } from "@/lib/auth-client";
 import Link from "next/link";
 function Header() {
   const { user, isSignedIn } = useUser();

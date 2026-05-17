@@ -1,12 +1,6 @@
 import { Inter, Merriweather } from "next/font/google";
 import "./globals.css";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { AuthProvider } from "@/lib/auth-client";
 import { Toaster } from "sonner";
 
 const merriweather = Merriweather({ subsets: ["latin"], weight: ["400"] });
@@ -18,13 +12,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <AuthProvider>
       <html lang="en">
         <body className={merriweather.className}>
           <Toaster />
           <main>{children}</main>
         </body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

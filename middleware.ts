@@ -1,21 +1,26 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from "next/server";
-import { getAuth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+const protectedPrefixes = ["/dashboard"];
+const authRoutes = ["/sign-in", "/sign-up"];
 
-export default clerkMiddleware((auth, req) => {
-  if (!auth().userId && isProtectedRoute(req)) {
-    const signInUrl = new URL("/sign-in", req.url);
-    return NextResponse.redirect(signInUrl);
+export default function middleware(req) {
+  const pathname = req.nextUrl.pathname;
+  const token = req.cookies.get("pw_refresh_token")?.value;
+  const isProtectedRoute = protectedPrefixes.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+
+  if (!token && isProtectedRoute) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
-  if (auth().userId && req.nextUrl.pathname === "/") {
-    const dashboardUrl = new URL("/dashboard", req.url);
-    return NextResponse.redirect(dashboardUrl);
+
+  if (token && (pathname === "/" || isAuthRoute)) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
+
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],

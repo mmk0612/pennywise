@@ -1,16 +1,11 @@
 "use client";
 import React, { useEffect } from "react";
-import { db } from "@/utils/dbConfig";
-import { eq, desc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-import { getTableColumns } from "drizzle-orm";
-import { Expenses, Budgets } from "@/utils/schema";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth-client";
 import { useState } from "react";
 import BudgetItem from "../../budgets/_components/BudgetItem";
 import AddExpense from "../_components/AddExpense";
 import ExpenseListTable from "../_components/ExpenseListTable";
-import { PenBox, Trash, TrashIcon } from "lucide-react";
+import { TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BackButton from "../../_components/BackButton";
 import {
@@ -24,11 +19,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import EditBudget from "../_components/EditBudget";
+import {
+  budgetApi,
+  expenseApi,
+  toUiBudget,
+  toUiExpense,
+} from "@/lib/api-client";
 
 function ExpensesScreen({ params }) {
   const { user } = useUser();
@@ -50,51 +49,51 @@ function ExpensesScreen({ params }) {
   }, [overSpent]);
 
   const getBudgetInfo = async () => {
-    const result = await db
-      .select({
-        ...getTableColumns(Budgets),
-        totalSpent: sql`sum(${Expenses.amount})`.mapWith(Number),
-        totalCount: sql`count(${Expenses.id})`.mapWith(Number),
-      })
-      .from(Budgets)
-      .leftJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-      .groupBy(Budgets.id)
-      .where(eq(Budgets.id, params.id));
+    const [budget, budgetExpenses] = await Promise.all([
+      budgetApi.getById(params.id),
+      expenseApi.listByBudget(params.id),
+    ]);
 
-    if (result[0].totalSpent > result[0].amount) {
+    const totalSpent = budgetExpenses.reduce(
+      (sum, expense) => sum + Number(expense.amount || 0),
+      0,
+    );
+
+    if (totalSpent > Number(budget.amount || 0)) {
       toast.error("You have overspent your budget");
       setOverSpent(true);
+    } else {
+      setOverSpent(false);
     }
-    setBudgetInfo(result[0]);
-    getExpensesList();
+
+    setBudgetInfo(
+      toUiBudget(budget, {
+        totalSpent,
+        totalCount: budgetExpenses.length,
+      }),
+    );
+
+    const normalizedExpenses = budgetExpenses
+      .map(toUiExpense)
+      .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
+    setExpensesList(normalizedExpenses);
   };
 
   const getExpensesList = async () => {
-    const result = await db
-      .select()
-      .from(Expenses)
-      .where(eq(Expenses.budgetId, params.id))
-      .orderBy(desc(Expenses.id));
-
-    console.log(result);
-    setExpensesList(result);
+    const result = await expenseApi.listByBudget(params.id);
+    const normalizedExpenses = result
+      .map(toUiExpense)
+      .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
+    setExpensesList(normalizedExpenses);
   };
 
   const deleteBudget = async () => {
-    const deleteExpenses = await db
-      .delete(Expenses)
-      .where(eq(params.id, Expenses.budgetId))
-      .returning();
-
-    if (deleteExpenses) {
-      const result = await db
-        .delete(Budgets)
-        .where(eq(Budgets.id, params.id))
-        .returning();
-
+    try {
+      await budgetApi.delete(params.id);
       toast.success("Budget Deleted Successfully");
       route.replace("/dashboard/budgets");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete budget");
     }
   };
   return (
@@ -168,11 +167,7 @@ function ExpensesScreen({ params }) {
         ) : (
           <div className="h-[150px] w-full bg-slate-200 rounded-lg animate-pulse"></div>
         )}
-        <AddExpense
-          budgetId={params.id}
-          user={user}
-          refreshData={() => getBudgetInfo()}
-        />
+        <AddExpense budgetId={params.id} refreshData={() => getBudgetInfo()} />
       </div>
       <div className="mt-4">
         <ExpenseListTable

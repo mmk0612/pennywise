@@ -1,6 +1,41 @@
-import { SignIn } from "@clerk/nextjs";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function Page() {
+  const router = useRouter();
+  const { signIn, isSignedIn, isLoading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && isSignedIn) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isSignedIn, router]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+      await signIn({ email, password });
+      toast.success("Signed in successfully");
+      router.replace("/dashboard");
+    } catch (error) {
+      toast.error(error.message || "Unable to sign in");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="bg-slate-200">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-12">
@@ -65,7 +100,54 @@ export default function Page() {
                 achieve your financial goals with just a few clicks.
               </p>
             </div>
-            <SignIn />
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 rounded-lg bg-white p-6 shadow-md"
+            >
+              <h3 className="text-xl font-semibold text-black">
+                Sign in to your account
+              </h3>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign In"}
+              </Button>
+
+              <p className="text-sm text-gray-600">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/sign-up"
+                  className="font-semibold text-blue-700 hover:underline"
+                >
+                  Create one
+                </Link>
+              </p>
+            </form>
           </div>
         </main>
       </div>

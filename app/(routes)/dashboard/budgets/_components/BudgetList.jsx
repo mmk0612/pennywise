@@ -1,14 +1,12 @@
 "use client";
 import React from "react";
 import CreateBudget from "./CreateBudget";
-import { desc, getTableColumns, sql } from "drizzle-orm";
-import { Budgets, Expenses } from "@/utils/schema";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth-client";
 import { useState } from "react";
 import { useEffect } from "react";
-import { db } from "@/utils/dbConfig";
 import BudgetItem from "./BudgetItem";
-import { eq } from "drizzle-orm";
+import { budgetApi, expenseApi, mergeBudgetStats } from "@/lib/api-client";
+import { toast } from "sonner";
 
 function BudgetList() {
   const [budgetList, setBudgetList] = useState([]);
@@ -22,23 +20,30 @@ function BudgetList() {
   const getBudgetList = async () => {
     setIsLoading(true);
     try {
-      const result = await db
-        .select({
-          ...getTableColumns(Budgets),
-          totalSpent: sql`sum(${Expenses.amount})`.mapWith(Number),
-          totalCount: sql`count(${Expenses.id})`.mapWith(Number),
-        })
-        .from(Budgets)
-        .leftJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-        .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-        .groupBy(Budgets.id)
-        .orderBy(desc(Budgets.id));
+      const [budgets, expenses] = await Promise.all([
+        budgetApi.list(),
+        expenseApi.list(),
+      ]);
 
-      setBudgetList(result);
+      const mergedBudgets = mergeBudgetStats(budgets, expenses).sort(
+        (a, b) => Number(b.id) - Number(a.id),
+      );
+
+      setBudgetList(mergedBudgets);
     } catch (error) {
       console.error("Error fetching budget list:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteBudget = async (budgetId) => {
+    try {
+      await budgetApi.delete(budgetId);
+      toast.success("Budget deleted successfully");
+      await getBudgetList();
+    } catch (error) {
+      toast.error(error.message || "Failed to delete budget");
     }
   };
 
@@ -55,7 +60,11 @@ function BudgetList() {
           ))
         ) : budgetList.length > 0 ? (
           budgetList.map((budget, index) => (
-            <BudgetItem budgetInfo={budget} key={index} />
+            <BudgetItem
+              budgetInfo={budget}
+              key={index}
+              onDelete={handleDeleteBudget}
+            />
           ))
         ) : (
           <></>

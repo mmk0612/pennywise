@@ -14,10 +14,8 @@ import EmojiPicker from "emoji-picker-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Budgets } from "@/utils/schema";
-import { db } from "@/utils/dbConfig";
-import { Toaster, toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
+import { budgetApi } from "@/lib/api-client";
 
 function CreateBudget({ refreshData }) {
   const [emojiIcon, setEmojiIcon] = useState("😀");
@@ -26,21 +24,20 @@ function CreateBudget({ refreshData }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState(0);
 
-  const { user } = useUser();
   const onCreateBudget = async () => {
-    const result = await db
-      .insert(Budgets)
-      .values({
-        name: name,
-        amount: amount,
-        createdBy: user?.primaryEmailAddress?.emailAddress,
-        icon: emojiIcon,
-      })
-      .returning({ insertedId: Budgets.id });
+    try {
+      await budgetApi.create({
+        name,
+        amount: Number(amount),
+        period: "MONTHLY",
+        startDate: null,
+        endDate: null,
+      });
 
-    if (result) {
       refreshData();
       toast.success("Budget Created Successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to create budget");
     }
   };
   return (

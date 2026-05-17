@@ -2,7 +2,6 @@
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader, PenBox } from "lucide-react";
-import { db } from "@/utils/dbConfig";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import EmojiPicker from "emoji-picker-react";
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import { Input } from "@/components/ui/input";
-import { eq } from "drizzle-orm";
-import { Budgets } from "@/utils/schema";
 import { toast } from "sonner";
+import { budgetApi } from "@/lib/api-client";
 
 function EditBudget({ budget, refreshData }) {
   const [emojiIcon, setEmojiIcon] = useState(budget?.icon);
@@ -29,8 +26,6 @@ function EditBudget({ budget, refreshData }) {
   const [amount, setAmount] = useState(budget?.amount);
 
   const [loading, setLoading] = useState(false);
-  const { user } = useUser();
-
   useEffect(() => {
     if (budget) {
       setEmojiIcon(budget?.icon);
@@ -40,20 +35,20 @@ function EditBudget({ budget, refreshData }) {
   }, [budget]);
   const onUpdateBudget = async () => {
     setLoading(true);
-    const result = await db
-      .update(Budgets)
-      .set({
-        name: name,
-        amount: amount,
-        icon: emojiIcon,
-      })
-      .where(eq(Budgets.id, budget.id))
-      .returning();
+    try {
+      await budgetApi.update(budget.id, {
+        name,
+        amount: Number(amount),
+        period: budget?.period || "MONTHLY",
+        startDate: budget?.startDate || null,
+        endDate: budget?.endDate || null,
+      });
 
-    if (result) {
       setLoading(false);
       refreshData();
       toast.success("Budget Updated Successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to update budget");
     }
     setLoading(false);
   };

@@ -1,19 +1,19 @@
 "use client";
 import React from "react";
-import { UserButton } from "@clerk/nextjs";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth-client";
 import CardInfo from "./_components/CardInfo";
-import { db } from "@/utils/dbConfig";
-import { Budgets, Expenses } from "@/utils/schema";
-import { eq, desc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-import { getTableColumns } from "drizzle-orm";
 import { useState } from "react";
 import { useEffect } from "react";
 import BarChartDashboard from "./_components/BarChartDashboard";
 import BudgetItem from "./budgets/_components/BudgetItem";
 import ExpenseListTable from "./expenses/_components/ExpenseListTable";
 import { Loader } from "lucide-react";
+import {
+  budgetApi,
+  expenseApi,
+  mergeBudgetStats,
+  toUiExpense,
+} from "@/lib/api-client";
 export default function page() {
   const [budgetList, setBudgetList] = useState([]);
   const [expensesList, setExpensesList] = useState([]);
@@ -26,38 +26,24 @@ export default function page() {
 
   const getBudgetList = async () => {
     setLoading(true);
-    const result = await db
-      .select({
-        ...getTableColumns(Budgets),
-        totalSpent: sql`sum(${Expenses.amount})`.mapWith(Number),
-        totalCount: sql`count(${Expenses.id})`.mapWith(Number),
-      })
-      .from(Budgets)
-      .leftJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-      .groupBy(Budgets.id)
-      .orderBy(desc(Budgets.id));
+    try {
+      const [budgets, expenses] = await Promise.all([
+        budgetApi.list(),
+        expenseApi.list(),
+      ]);
 
-    console.log(result);
-    setBudgetList(result);
-    getAllExpenses();
-    setLoading(false);
-  };
+      const mergedBudgets = mergeBudgetStats(budgets, expenses).sort(
+        (a, b) => Number(b.id) - Number(a.id),
+      );
+      setBudgetList(mergedBudgets);
 
-  const getAllExpenses = async () => {
-    const result = await db
-      .select({
-        id: Expenses.id,
-        name: Expenses.name,
-        amount: Expenses.amount,
-        createdAt: Expenses.createdAt,
-      })
-      .from(Budgets)
-      .rightJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-      .orderBy(desc(Expenses.createdAt));
-
-    setExpensesList(result);
+      const normalizedExpenses = expenses
+        .map(toUiExpense)
+        .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
+      setExpensesList(normalizedExpenses);
+    } finally {
+      setLoading(false);
+    }
   };
   return loading ? (
     <Loader

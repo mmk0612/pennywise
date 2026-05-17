@@ -3,10 +3,8 @@ import { useEffect, React } from "react";
 import { useRouter } from "next/navigation";
 import SideNav from "./_components/SideNav";
 import DashboardHeader from "./_components/DashboardHeader";
-import { db } from "@/utils/dbConfig";
-import { Budgets } from "@/utils/schema";
-import { useUser } from "@clerk/nextjs";
-import { eq } from "drizzle-orm";
+import { useUser } from "@/lib/auth-client";
+import { budgetApi } from "@/lib/api-client";
 
 function dashboardLayout({ children }) {
   const { user } = useUser();
@@ -17,10 +15,7 @@ function dashboardLayout({ children }) {
   }, [user]);
 
   const checkUserBudget = async () => {
-    const result = await db
-      .select()
-      .from(Budgets)
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress));
+    const result = await budgetApi.list();
 
     if (result?.length == 0) {
       router.replace("/dashboard/budgets");

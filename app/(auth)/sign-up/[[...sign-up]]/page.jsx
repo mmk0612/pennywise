@@ -1,6 +1,42 @@
-import { SignUp } from "@clerk/nextjs";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function Page() {
+  const router = useRouter();
+  const { signUp, isSignedIn, isLoading } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && isSignedIn) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isSignedIn, router]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+      await signUp({ name, email, password });
+      toast.success("Account created successfully");
+      router.replace("/dashboard");
+    } catch (error) {
+      toast.error(error.message || "Unable to create account");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="bg-slate-200">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-12">
@@ -65,7 +101,67 @@ export default function Page() {
                 achieve your financial goals with just a few clicks.
               </p>
             </div>
-            <SignUp />
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 rounded-lg bg-white p-6 shadow-md"
+            >
+              <h3 className="text-xl font-semibold text-black">
+                Create your PennyWise account
+              </h3>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Creating account..." : "Sign Up"}
+              </Button>
+
+              <p className="text-sm text-gray-600">
+                Already have an account?{" "}
+                <Link
+                  href="/sign-in"
+                  className="font-semibold text-blue-700 hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </form>
           </div>
         </main>
       </div>

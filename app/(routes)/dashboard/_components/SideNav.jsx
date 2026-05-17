@@ -7,10 +7,11 @@ import {
   ReceiptText,
   ShieldCheck,
   Menu,
+  FileText,
 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton } from "@/lib/auth-client";
 import { usePathname } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +38,12 @@ function SideNav() {
     },
     {
       id: 4,
+      name: "Statements",
+      icon: FileText,
+      path: "/dashboard/statements",
+    },
+    {
+      id: 5,
       name: "Upgrade",
       icon: ShieldCheck,
       path: "/dashboard/upgrade",

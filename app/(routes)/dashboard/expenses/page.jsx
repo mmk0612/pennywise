@@ -1,56 +1,32 @@
 "use client";
 import React from "react";
 import ExpenseListTable from "./_components/ExpenseListTable";
-import { db } from "@/utils/dbConfig";
-import { Budgets, Expenses } from "@/utils/schema";
-import { eq, desc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-import { getTableColumns } from "drizzle-orm";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth-client";
 import BackButton from "../_components/BackButton";
 import { useState, useEffect } from "react";
 import { Loader } from "lucide-react";
+import { expenseApi, toUiExpense } from "@/lib/api-client";
 
 function page() {
   const [expensesList, setExpensesList] = useState([]);
   const { user } = useUser();
 
   useEffect(() => {
-    user && getBudgetList();
+    user && getAllExpenses();
   }, [user]);
 
-  const getBudgetList = async () => {
-    const result = await db
-      .select({
-        ...getTableColumns(Budgets),
-        totalSpent: sql`sum(${Expenses.amount})`.mapWith(Number),
-        totalCount: sql`count(${Expenses.id})`.mapWith(Number),
-      })
-      .from(Budgets)
-      .leftJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-      .groupBy(Budgets.id)
-      .orderBy(desc(Budgets.id));
-
-    getAllExpenses();
-  };
   const [loading, setLoading] = useState(false);
   const getAllExpenses = async () => {
     setLoading(true);
-    const result = await db
-      .select({
-        id: Expenses.id,
-        name: Expenses.name,
-        amount: Expenses.amount,
-        createdAt: Expenses.createdAt,
-      })
-      .from(Budgets)
-      .rightJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-      .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
-      .orderBy(desc(Expenses.createdAt));
-
-    setLoading(false);
-    setExpensesList(result);
+    try {
+      const expenses = await expenseApi.list();
+      const normalizedExpenses = expenses
+        .map(toUiExpense)
+        .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate));
+      setExpensesList(normalizedExpenses);
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="ml-8 w-[80%]">
@@ -58,7 +34,7 @@ function page() {
         <BackButton />
         <ExpenseListTable
           expensesList={expensesList}
-          refreshData={() => getBudgetList()}
+          refreshData={() => getAllExpenses()}
         />
         {loading && <Loader className="mx-auto my-20" size="50" />}
       </div>
