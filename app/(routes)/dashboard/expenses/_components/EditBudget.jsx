@@ -38,6 +38,7 @@ function EditBudget({ budget, refreshData }) {
     try {
       await budgetApi.update(budget.id, {
         name,
+        icon: emojiIcon,
         amount: Number(amount),
         period: budget?.period || "MONTHLY",
         startDate: budget?.startDate || null,

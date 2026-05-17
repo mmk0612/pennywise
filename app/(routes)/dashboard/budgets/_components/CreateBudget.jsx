@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { budgetApi } from "@/lib/api-client";
 
-function CreateBudget({ refreshData }) {
+function CreateBudget({ refreshData, trigger }) {
   const [emojiIcon, setEmojiIcon] = useState("😀");
   const [openEmojiPicker, setOpenEmojiPicker] = useState(false);
 
@@ -28,6 +28,7 @@ function CreateBudget({ refreshData }) {
     try {
       await budgetApi.create({
         name,
+        icon: emojiIcon,
         amount: Number(amount),
         period: "MONTHLY",
         startDate: null,
@@ -44,10 +45,12 @@ function CreateBudget({ refreshData }) {
     <div>
       <Dialog>
         <DialogTrigger asChild>
-          <div className="bg-slate-100 p-10 rounded-md items-center flex flex-col border-2 border-dashed cursor-pointer hover:shadow-md h-[170px]">
-            <h2 className="text-5xl">+</h2>
-            <h2>Create New Budget</h2>
-          </div>
+          {trigger || (
+            <div className="bg-slate-100 p-10 rounded-md items-center flex flex-col border-2 border-dashed cursor-pointer hover:shadow-md h-[170px]">
+              <h2 className="text-5xl">+</h2>
+              <h2>Create New Budget</h2>
+            </div>
+          )}
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>

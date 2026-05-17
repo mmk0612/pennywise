@@ -7,6 +7,7 @@ import { Loader, CheckCircle, ArrowLeft, XCircle, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import CreateBudget from "../../budgets/_components/CreateBudget";
 
 export default function ReviewPredictionsPage({ params }) {
   const router = useRouter();
@@ -206,18 +207,29 @@ export default function ReviewPredictionsPage({ params }) {
             confirming.
           </p>
         </div>
-        <Button
-          onClick={handleSubmit}
-          disabled={submitting || predictions.length === 0}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          {submitting ? (
-            <Loader className="animate-spin mr-2" size={16} />
-          ) : (
-            <CheckCircle className="mr-2" size={16} />
-          )}
-          Confirm & Save All
-        </Button>
+        <div className="flex items-center">
+          <CreateBudget
+            refreshData={fetchData}
+            trigger={
+              <Button variant="outline" className="mr-3">
+                <Plus className="mr-2" size={16} />
+                New Budget
+              </Button>
+            }
+          />
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || predictions.length === 0}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {submitting ? (
+              <Loader className="animate-spin mr-2" size={16} />
+            ) : (
+              <CheckCircle className="mr-2" size={16} />
+            )}
+            Confirm & Save All
+          </Button>
+        </div>
       </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
@@ -314,7 +326,7 @@ export default function ReviewPredictionsPage({ params }) {
                       </div>
                     </td>
                     <td className="p-4 text-gray-800 font-semibold">
-                      ${p.amount}
+                      Rs. {p.amount}
                     </td>
                     <td
                       className="p-4 text-xs text-gray-400 truncate max-w-xs"
@@ -361,21 +373,6 @@ export default function ReviewPredictionsPage({ params }) {
                     </td>
                     <td className="p-4 align-top">
                       <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                          onClick={() =>
-                            handleBudgetChange(
-                              getPredictionKey(p),
-                              p.finalBudgetId || p.suggestedBudgetId || "",
-                            )
-                          }
-                          disabled={p.rejected}
-                        >
-                          <CheckCircle className="mr-1" size={14} /> Confirm
-                        </Button>
                         <Button
                           type="button"
                           variant="outline"
