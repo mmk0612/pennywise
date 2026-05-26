@@ -3,7 +3,7 @@ import React from "react";
 import { toast } from "sonner";
 import { expenseApi } from "@/lib/api-client";
 
-function ExpenseListTable({ expensesList, refreshData }) {
+function ExpenseListTable({ expensesList, refreshData, readOnly = false }) {
   const deleteExpense = async (expense) => {
     try {
       await expenseApi.delete(expense.id);
@@ -23,15 +23,19 @@ function ExpenseListTable({ expensesList, refreshData }) {
         <h2 className="font-bold">Action</h2>
       </div>
       {expensesList.map((expenses, index) => (
-        <div className="grid grid-cols-6 bg-slate-50 p-2">
+        <div className="grid grid-cols-6 bg-slate-50 p-2" key={index}>
           <h2 className="col-span-2">{expenses.name}</h2>
           <h2 className="col-span-2">{expenses.amount}</h2>
           <h2 className="hidden sm:block">{expenses.createdAt}</h2>
           <h2>
-            <TrashIcon
-              onClick={() => deleteExpense(expenses)}
-              className="text-red-600"
-            />
+            {!readOnly ? (
+              <TrashIcon
+                onClick={() => deleteExpense(expenses)}
+                className="text-red-600"
+              />
+            ) : (
+              <span className="text-xs text-slate-400">Archived</span>
+            )}
           </h2>
         </div>
       ))}
